@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AEGIS — Drone Command Dashboard</title>
+  <meta name="description" content="Real-time drone dispatch and incident management system for Pune surveillance network." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ══ TOP BAR ══════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="logo">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="16" cy="16" r="14" stroke="#00d4ff" stroke-width="2"/>
+          <path d="M16 6 L20 14 L28 14 L22 20 L24 28 L16 23 L8 28 L10 20 L4 14 L12 14 Z" fill="#00d4ff" opacity="0.8"/>
+          <circle cx="16" cy="16" r="3" fill="#00d4ff"/>
+        </svg>
+        <span class="logo-text">AEGIS</span>
+        <span class="logo-sub">DRONE COMMAND</span>
+      </div>
+    </div>
+    <div class="topbar-center">
+      <div class="status-bar">
+        <div class="status-item" id="ws-status">
+          <span class="pulse-dot disconnected"></span>
+          <span>OFFLINE</span>
+        </div>
+        <div class="divider"></div>
+        <div class="status-item">
+          <span class="label">DRONES</span>
+          <span class="value" id="header-drone-count">–</span>
+        </div>
+        <div class="divider"></div>
+        <div class="status-item">
+          <span class="label">INCIDENTS</span>
+          <span class="value" id="header-incident-count">–</span>
+        </div>
+        <div class="divider"></div>
+        <div class="status-item">
+          <span class="label">ACTIVE</span>
+          <span class="value accent" id="header-active-count">–</span>
+        </div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="clock" id="clock">00:00:00</div>
+      <div class="date" id="date"></div>
+    </div>
+  </header>
+
+  <!-- ══ MAIN LAYOUT ═══════════════════════════════════════════════════════ -->
+  <main class="layout">
+
+    <!-- ── LEFT PANEL ─────────────────────────────────────────────────── -->
+    <aside class="panel panel-left">
+
+      <!-- Stations -->
+      <section class="card" id="stations-card">
+        <div class="card-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <h2>Drone Stations</h2>
+          <span class="badge" id="station-count">0</span>
+        </div>
+        <div class="card-body" id="stations-list">
+          <div class="empty-state">Loading stations…</div>
+        </div>
+      </section>
+
+      <!-- Fleet State -->
+      <section class="card" id="fleet-card">
+        <div class="card-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          <h2>Fleet Status</h2>
+          <span class="badge" id="fleet-count">0</span>
+        </div>
+        <div class="card-body" id="fleet-list">
+          <div class="empty-state">Loading fleet data…</div>
+        </div>
+      </section>
+
+      <!-- CCTV Feeds -->
+      <section class="card card-tall" id="cctv-card">
+        <div class="card-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+          <h2>CCTV Feeds</h2>
+          <span class="badge badge-live">LIVE</span>
+        </div>
+        <div class="card-body cctv-grid" id="cctv-feeds">
+          <div class="cctv-item" id="cctv-cam1">
+            <div class="cctv-label">CAM-1 · Zone A</div>
+            <video class="cctv-video" autoplay muted loop playsinline>
+              <source src="http://localhost:5001/api/video/input1.mp4" type="video/mp4" />
+            </video>
+            <div class="cctv-overlay">
+              <span class="cctv-status">● REC</span>
+              <span class="cctv-coords">18.5392°N 73.8633°E</span>
+            </div>
+          </div>
+          <div class="cctv-item" id="cctv-cam2">
+            <div class="cctv-label">CAM-2 · Zone B</div>
+            <video class="cctv-video" autoplay muted loop playsinline>
+              <source src="http://localhost:5001/api/video/input2.mp4" type="video/mp4" />
+            </video>
+            <div class="cctv-overlay">
+              <span class="cctv-status">● REC</span>
+              <span class="cctv-coords">18.4954°N 73.9040°E</span>
+            </div>
+          </div>
+          <div class="cctv-item" id="cctv-cam3">
+            <div class="cctv-label">CAM-3 · Zone C</div>
+            <video class="cctv-video" autoplay muted loop playsinline>
+              <source src="http://localhost:5001/api/video/input3.mp4" type="video/mp4" />
+            </video>
+            <div class="cctv-overlay">
+              <span class="cctv-status">● REC</span>
+              <span class="cctv-coords">18.5421°N 73.8111°E</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </aside>
+
+    <!-- ── CENTER: MAP ─────────────────────────────────────────────────── -->
+    <section class="map-container">
+      <div class="map-header">
+        <span class="map-title">Tactical Overview · Pune</span>
+        <div class="map-controls">
+          <button class="map-btn" id="btn-center" title="Center Map">⊕</button>
+          <button class="map-btn active" id="btn-paths" title="Toggle Paths">Path</button>
+          <button class="map-btn active" id="btn-stations" title="Toggle Stations">Station</button>
+        </div>
+      </div>
+      <div id="map"></div>
+      <div class="map-legend">
+        <div class="legend-item"><span class="legend-dot station"></span>Station</div>
+        <div class="legend-item"><span class="legend-dot drone"></span>Drone</div>
+        <div class="legend-item"><span class="legend-dot incident"></span>Incident</div>
+        <div class="legend-item"><span class="legend-line path"></span>A* Path</div>
+      </div>
+    </section>
+
+    <!-- ── RIGHT PANEL ─────────────────────────────────────────────────── -->
+    <aside class="panel panel-right">
+
+      <!-- Incidents -->
+      <section class="card card-scroll" id="incidents-card">
+        <div class="card-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <h2>Incidents</h2>
+          <span class="badge badge-alert" id="incident-badge">0</span>
+        </div>
+        <div class="card-body" id="incidents-list">
+          <div class="empty-state">Monitoring for incidents…</div>
+        </div>
+      </section>
+
+      <!-- Active Paths -->
+      <section class="card" id="paths-card">
+        <div class="card-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <h2>Active Missions</h2>
+          <span class="badge badge-active" id="paths-count">0</span>
+        </div>
+        <div class="card-body" id="paths-list">
+          <div class="empty-state">No active missions</div>
+        </div>
+      </section>
+
+      <!-- System Logs -->
+      <section class="card card-scroll card-tall" id="log-card">
+        <div class="card-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <h2>System Logs</h2>
+          <button class="clear-btn" id="clear-logs">Clear</button>
+        </div>
+        <div class="card-body log-body" id="system-logs">
+          <div class="log-entry info"><span class="log-time">--:--:--</span><span class="log-msg">Initialising AEGIS systems…</span></div>
+        </div>
+      </section>
+
+    </aside>
+  </main>
+
+  <!-- ══ INCIDENT MODAL ════════════════════════════════════════════════════ -->
+  <div class="modal-backdrop" id="modal-backdrop">
+    <div class="modal" id="incident-modal">
+      <div class="modal-header">
+        <h3 id="modal-title">Incident Detail</h3>
+        <button class="modal-close" id="modal-close">✕</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
