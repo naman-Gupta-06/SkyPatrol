@@ -15,7 +15,9 @@ _db_lock = threading.Lock()
 _HERE   = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(_HERE, "drone_paths.db")
 
+
 # ── Schema ────────────────────────────────────────────────────────────────────
+
 def init_path_db() -> None:
     """Create / migrate drone_paths.db on startup (idempotent)."""
     with sqlite3.connect(DB_PATH) as conn:
@@ -55,15 +57,6 @@ def init_path_db() -> None:
         conn.commit()
     print("✅ drone_paths.db initialised")
 
-def clear_path_db() -> None:
-    """Clear all records from drone_paths.db"""
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    with _db_lock:
-        with sqlite3.connect(DB_PATH) as conn:
-            conn.execute("DELETE FROM paths")
-            conn.commit()
-    print("✅ drone_paths.db cleared")
-    
 
 # ── Write ─────────────────────────────────────────────────────────────────────
 
@@ -154,6 +147,16 @@ def path_exists_for_incident(incident_id: str) -> bool:
     return count > 0
 
 
+def delete_paths_for_incident(incident_id: str | None) -> None:
+    """Remove completed incident paths so the map only reloads active missions."""
+    if not incident_id:
+        return
+    with _db_lock:
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.execute("DELETE FROM paths WHERE incident_id = ?", (incident_id,))
+            conn.commit()
+
+
 def fetch_path_by_id(path_id: str) -> dict | None:
     """Return a single path record by its UUID."""
     with sqlite3.connect(DB_PATH) as conn:
@@ -171,6 +174,15 @@ def fetch_path_by_id(path_id: str) -> dict | None:
 def count_paths() -> int:
     with sqlite3.connect(DB_PATH) as conn:
         return conn.execute("SELECT COUNT(*) FROM paths").fetchone()[0]
+
+
+def clear_all_paths() -> None:
+    """Delete saved dispatch paths so each backend run starts from live state."""
+    with _db_lock:
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.execute("DELETE FROM paths")
+            conn.commit()
+    print("drone_paths.db dynamic paths cleared.")
 
 
 # ── Internal ──────────────────────────────────────────────────────────────────

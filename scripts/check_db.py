@@ -55,21 +55,23 @@ def main() -> None:
 
     # 4. Check Alerts Summary
     alerts = fetch_table_data("alerts")
-    pending = [a for a in alerts if a['dispatched'] == 0]
-    dispatched = [a for a in alerts if a['dispatched'] == 1]
+    pending_alerts = [a for a in alerts if a.get('status') == 'pending']
+    dispatched_alerts = [a for a in alerts if a.get('status') == 'dispatched']
+    ignored_alerts = [a for a in alerts if a.get('status') == 'ignored']
     
     print(f"\n🚨 ALERTS SUMMARY ({len(alerts)} Total):")
-    print(f"  ⏳ Pending:    {len(pending)}")
-    print(f"  ✅ Dispatched: {len(dispatched)}")
+    print(f"  ⏳ Pending:    {len(pending_alerts)}")
+    print(f"  ✅ Dispatched: {len(dispatched_alerts)}")
+    print(f"  ⏭️  Ignored:    {len(ignored_alerts)}")
     
-    if pending:
+    if pending_alerts:
         print("\n  -- Top 5 Pending Alerts --")
         # Sort pending by severity (highest first) and show the top 5
-        pending.sort(key=lambda x: x['severity'], reverse=True)
-        for a in pending[:5]:
+        pending_alerts.sort(key=lambda x: x['severity'], reverse=True)
+        for a in pending_alerts[:5]:
             print(f"    [{a['id'][:15]}...] {a['incident_type'].upper():10s} | Sev: {a['severity']:.2f}")
-        if len(pending) > 5:
-            print(f"    ... and {len(pending) - 5} more.")
+        if len(pending_alerts) > 5:
+            print(f"    ... and {len(pending_alerts) - 5} more.")
 
     print("\n" + "="*60 + "\n")
 
